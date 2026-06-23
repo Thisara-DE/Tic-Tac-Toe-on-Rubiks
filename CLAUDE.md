@@ -84,6 +84,24 @@ Everything lives in `game.js`. The non-obvious, load-bearing design decisions:
 - **The preview renderer can wedge after many rapid reloads** (screenshots time out
   while `preview_eval` still responds). Fix: `preview_stop` then `preview_start`.
 
+## Possible future enhancements (none committed to — ideas only)
+
+The project is considered complete; these are open ideas if work ever resumes:
+
+- **Vendor Three.js locally** so the game works fully offline. Currently Three.js is
+  CDN-dependent on first load (ES-module import map in `index.html`) — download it into
+  the repo and point the import map at a local path.
+- **Scrambled-start mode** — begin from a randomly scrambled cube instead of a solved one.
+- **Move counter** — track and display the number of rounds / rotations played.
+- **AI plays X / moves first** — currently the AI is Player 2 (O); allow it to take the
+  X role and/or open the game.
+- **Sound** — placement, rotation, and win cues.
+- **Mobile / touch polish** — verify and refine the custom pointer handling on touch
+  devices.
+- **Drag-to-twist polish** — the drag-to-twist gesture is the secondary input path
+  (the move buttons are the reliable one); slice-layer drags are the least precise and
+  would benefit from a dedicated pass.
+
 ## Git
 
 Remote: `Thisara-DE/Tic-Tac-Toe-on-Rubiks`. This repo is configured with
