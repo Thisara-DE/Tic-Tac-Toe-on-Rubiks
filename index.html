@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rubik's Cube Tic-Tac-Toe</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <h1>Rubik's Cube&nbsp;·&nbsp;Tic-Tac-Toe</h1>
+      <div id="status">
+        <span id="turn-indicator" class="player-x">Player 1 (X)</span>
+        <span id="phase-indicator">— place your mark</span>
+      </div>
+    </header>
+
+    <div id="stage">
+      <canvas id="scene"></canvas>
+      <div id="banner" class="hidden">
+        <div id="banner-text"></div>
+        <button id="banner-reset" class="btn-primary">Play again</button>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div id="moves" class="moves-grid"></div>
+      <div id="control-row">
+        <p id="hint">Place a mark on an empty sticker · then your opponent rotates a layer that must include that cubie · drag empty space to orbit</p>
+        <div id="control-actions">
+          <label id="ai-label"><input type="checkbox" id="ai-toggle" /> AI opponent (Player 2)</label>
+          <button id="reset" class="btn-secondary">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
