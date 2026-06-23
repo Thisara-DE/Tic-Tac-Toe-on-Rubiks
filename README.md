@@ -10,6 +10,10 @@ you. 🌀
 Built with [Three.js](https://threejs.org/) (loaded straight from a CDN). No build
 step, no framework, no dependencies to install. Just open it and play.
 
+## 🔗 Play it live
+
+**[thisara-de.github.io/Tic-Tac-Toe-on-Rubiks](https://thisara-de.github.io/Tic-Tac-Toe-on-Rubiks/)**
+
 ## 🎯 Rules
 
 - **Player 1** plays **✖️**, **Player 2** plays **⭕**.
