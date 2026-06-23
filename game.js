@@ -416,20 +416,76 @@ function checkWin(priority) {
 
 function endGame(result) {
   state.over = true;
+  clearHint();
+  clearPlacedHighlight();
+  inputLocked = false; // allow the cube to be orbited/reviewed after the game
   updateButtons();
   if (result.draw) {
     bannerText.textContent = "Draw!";
     bannerText.style.color = "var(--text)";
+    turnEl.textContent = "Draw";
+    turnEl.className = "";
   } else {
     const num = result.player === "X" ? 1 : 2;
-    bannerText.textContent = `Player ${num} (${result.player}) wins!`;
+    const label = `Player ${num} (${result.player}) wins!`;
+    bannerText.textContent = label;
     bannerText.style.color = result.player === "X" ? X_COLOR : O_COLOR;
+    turnEl.textContent = label;
+    turnEl.className = result.player === "X" ? "player-x" : "player-o";
     result.cells.forEach((stk) => {
       stk.material.emissive = new THREE.Color(0x2ecc71);
       stk.material.emissiveIntensity = 0.9;
     });
+    drawWinLine(result.cells, result.player);
   }
+  phaseEl.textContent = "— drag to review the cube";
   banner.classList.remove("hidden");
+}
+
+// A bold strike-through line connecting the three winning sticker centres,
+// like a classic tic-tac-toe win. Added to cubeGroup so it orbits with the cube.
+let winLine = null;
+function drawWinLine(cells, player) {
+  clearWinLine();
+  const toLocal = (stk) => cubeGroup.worldToLocal(stk.getWorldPosition(new THREE.Vector3()));
+  const pts = cells.map(toLocal);
+  // outward face normal (in cubeGroup-local space) to lift the line off the surface
+  const c1 = cells[1];
+  const normal = c1.userData.localNormal.clone()
+    .applyQuaternion(c1.userData.cubie.quaternion).normalize();
+
+  const a = pts[0], c = pts[2];
+  const dir = c.clone().sub(a).normalize();
+  const ext = STK_SIZE * 0.6; // overshoot past the end cells for the classic look
+  const start = a.clone().addScaledVector(dir, -ext).addScaledVector(normal, 0.07);
+  const end = c.clone().addScaledVector(dir, ext).addScaledVector(normal, 0.07);
+
+  const color = player === "X" ? X_COLOR : O_COLOR;
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const radius = 0.07;
+
+  winLine = new THREE.Group();
+  const len = end.clone().sub(start).length();
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 18), mat);
+  tube.position.copy(start).add(end).multiplyScalar(0.5);
+  tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  winLine.add(tube);
+  for (const p of [start, end]) {
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 14), mat);
+    cap.position.copy(p);
+    winLine.add(cap);
+  }
+  cubeGroup.add(winLine);
+}
+
+function clearWinLine() {
+  if (!winLine) return;
+  cubeGroup.remove(winLine);
+  winLine.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  });
+  winLine = null;
 }
 
 // ---- AI opponent (Player 2 / O) -----------------------------------
@@ -628,7 +684,8 @@ function projectToScreen(v3) {
 }
 
 canvas.addEventListener("pointerdown", (ev) => {
-  if (state.over || activeTween || inputLocked) return;
+  // Note: orbit is still allowed after the game ends (state.over) for review.
+  if (activeTween || inputLocked) return;
   canvas.setPointerCapture(ev.pointerId);
   const hit = pickSticker(ev);
   pointer = {
@@ -649,7 +706,7 @@ canvas.addEventListener("pointermove", (ev) => {
   if (!pointer.mode) {
     if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
     // decide gesture
-    if (pointer.sticker && state.phase === "rotate" && !activeTween) {
+    if (pointer.sticker && state.phase === "rotate" && !activeTween && !state.over) {
       beginTwist(pointer, dx, dy);
       pointer.mode = pointer.mode || "orbit"; // fallthrough if twist failed
     } else {
@@ -821,6 +878,7 @@ for (const label of MOVE_ORDER) {
 function reset() {
   clearHint();
   clearPlacedHighlight();
+  clearWinLine();
   buildCube();
   state.placer = "X";   // Player 1 (human) always places first
   state.phase = "place";

@@ -68,24 +68,29 @@ html, body {
 }
 #scene:active { cursor: grabbing; }
 
+/* Compact card at the top so the cube stays visible and orbitable after a win. */
 #banner {
   position: absolute;
-  inset: 0;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 18px;
-  background: rgba(8, 10, 16, 0.78);
-  backdrop-filter: blur(3px);
+  padding: 12px 20px;
+  background: rgba(22, 26, 36, 0.94);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   z-index: 5;
 }
 #banner.hidden { display: none; }
 
 #banner-text {
-  font-size: 38px;
+  font-size: 24px;
   font-weight: 800;
   text-align: center;
+  white-space: nowrap;
 }
 
 #controls {
