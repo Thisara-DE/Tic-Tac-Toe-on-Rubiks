@@ -262,6 +262,7 @@ const state = {
 
 let lastPlacedCubie = null; // the cubie the rotation must include
 let aiEnabled = false;      // when true, Player 2 (O) is the AI
+let difficulty = "medium";  // "easy" | "medium" | "hard"
 let inputLocked = false;    // blocks human input while the AI acts
 
 const opponent = (p) => (p === "X" ? "O" : "X");
@@ -277,7 +278,8 @@ function updateHUD() {
   const acting = actingPlayer();
   const num = acting === "X" ? 1 : 2;
   const ai = aiEnabled && acting === "O" && !state.over;
-  turnEl.textContent = `Player ${num} (${acting})${ai ? " · AI" : ""}`;
+  const diffLabel = difficulty[0].toUpperCase() + difficulty.slice(1);
+  turnEl.textContent = `Player ${num} (${acting})${ai ? ` · AI (${diffLabel})` : ""}`;
   turnEl.className = acting === "X" ? "player-x" : "player-o";
   if (state.over) phaseEl.textContent = "";
   else if (ai) phaseEl.textContent = "— AI is thinking…";
@@ -594,27 +596,37 @@ const WIN_VAL = 1e6;
 
 // O is the rotator: pick one of the constrained moves. Returns a label or null.
 // The opponent (X) just placed, so an X line means X wins (rotator priority O,
-// but an O line beats it). Take an O win; otherwise avoid an X win.
+// but an O line beats it).
+//   easy   — a random legal rotation.
+//   medium — take an O win, otherwise a random move that doesn't let X win.
+//   hard   — take an O win, otherwise the move with the best heuristic.
 function aiChooseRotation() {
   if (!lastPlacedCubie) return null;
-  const valid = [...validMovesFor(lastPlacedCubie)];
+  const valid = shuffle([...validMovesFor(lastPlacedCubie)]);
+  if (difficulty === "easy") return valid[0];
+
   const base = snapshot();
+  const safe = [];
   let best = null, bestScore = -Infinity;
-  for (const label of shuffle(valid)) {
+  for (const label of valid) {
     const m = MOVES[label];
     const st = cloneState(base);
     applyMoveSim(st, m.axis, m.layer, m.sign);
     if (hasLine(st, "O")) return label;            // O wins outright (rotator priority)
-    let score = heuristic(st);
-    if (hasLine(st, "X")) score -= WIN_VAL;        // never hand X the win
+    const xWin = hasLine(st, "X");
+    if (!xWin) safe.push(label);
+    const score = heuristic(st) - (xWin ? WIN_VAL : 0);
     if (score > bestScore) { bestScore = score; best = label; }
   }
-  return best;
+  if (difficulty === "medium") return safe.length ? safe[0] : best; // defensive, not optimal
+  return best;                                                      // hard: best heuristic
 }
 
-// O is the placer: choose an empty facelet, anticipating that the opponent (X)
-// will then pick — from the 6 moves through that cubie — the rotation worst for
-// us (X has rotator priority). 1-ply minimax over that response.
+// O is the placer: choose an empty facelet. The opponent (X) then rotates one of
+// the 6 layers through that cubie (X has rotator priority).
+//   easy   — a random empty sticker.
+//   medium — assume a neutral opponent rotation (average outcome).
+//   hard   — assume the opponent rotates to hurt us most (worst-case minimax).
 function aiChoosePlacement() {
   const base = snapshot();
   const empties = [];
@@ -622,24 +634,28 @@ function aiChoosePlacement() {
   if (empties.length === 0) return null;
 
   const realStk = (e) => cubies[e.ci].userData.stickers[e.si];
-  let best = null, bestVal = -Infinity;
+  const shuffled = shuffle(empties);
+  if (difficulty === "easy") return realStk(shuffled[0]);
 
-  for (const e of shuffle(empties)) {
+  let best = null, bestVal = -Infinity;
+  for (const e of shuffled) {
     const valid = [...movesForPos(base[e.ci].pos)];
-    let worst = Infinity; // opponent minimises our value
+    const vals = [];
     for (const label of valid) {
       const m = MOVES[label];
       const st = cloneState(base);
       st[e.ci].stickers[e.si].mark = "O";
       applyMoveSim(st, m.axis, m.layer, m.sign);
-      // Opponent (X) rotates → X has priority if both lines form.
       let v;
-      if (hasLine(st, "X")) v = -WIN_VAL;
+      if (hasLine(st, "X")) v = -WIN_VAL;          // opponent (X) wins on this rotation
       else if (hasLine(st, "O")) v = WIN_VAL;
       else v = heuristic(st);
-      if (v < worst) worst = v;
+      vals.push(v);
     }
-    if (worst > bestVal) { bestVal = worst; best = realStk(e); }
+    const score = difficulty === "hard"
+      ? Math.min(...vals)                          // worst case
+      : vals.reduce((a, b) => a + b, 0) / vals.length; // medium: average case
+    if (score > bestVal) { bestVal = score; best = realStk(e); }
   }
   return best;
 }
@@ -891,10 +907,15 @@ function reset() {
 document.getElementById("reset").addEventListener("click", reset);
 document.getElementById("banner-reset").addEventListener("click", reset);
 
-// ---- AI toggle ----------------------------------------------------
+// ---- AI toggle + difficulty ---------------------------------------
 const aiToggle = document.getElementById("ai-toggle");
+const difficultySelect = document.getElementById("difficulty");
+difficultySelect.value = difficulty;
+difficultySelect.disabled = !aiEnabled;
+
 aiToggle.addEventListener("change", () => {
   aiEnabled = aiToggle.checked;
+  difficultySelect.disabled = !aiEnabled;
   clearHint();
   // If the player who must act now is O, let the AI take over; else unlock.
   if (aiEnabled && actingPlayer() === "O" && !state.over && !activeTween) {
@@ -905,6 +926,11 @@ aiToggle.addEventListener("change", () => {
     inputLocked = false;
     updateHUD();
   }
+});
+
+difficultySelect.addEventListener("change", () => {
+  difficulty = difficultySelect.value;
+  updateHUD();
 });
 
 // ---- render loop --------------------------------------------------

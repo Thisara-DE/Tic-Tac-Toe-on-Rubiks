@@ -155,6 +155,19 @@ html, body {
 }
 #ai-label input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--o-color); }
 
+#difficulty {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #202736;
+  color: var(--text);
+  cursor: pointer;
+}
+#difficulty:disabled { opacity: 0.4; cursor: not-allowed; }
+#difficulty:focus { outline: none; border-color: var(--o-color); }
+
 .btn-primary, .btn-secondary {
   font-size: 14px;
   font-weight: 600;
